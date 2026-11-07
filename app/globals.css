@@ -1,26 +1,1045 @@
 @import "tailwindcss";
 
+/*
+  Sistema de diseño de Cuellar. Una sola idea: la página se construye como un camino.
+  - paper / concrete: hormigón claro. Fondos de lectura.
+  - asphalt: asfalto. Texto y la banda oscura del corte.
+  - marking: pintura vial. El único color vivo, siempre sobre oscuro o como relleno.
+  - gravel / earth / subbase: los materiales reales de cada capa.
+
+  Tipografía: una sola familia (Rethink Sans). El tamaño manda, no el peso.
+
+  Movimiento:
+  - Interfaz: 140 ms al entrar, 200 ms al salir, 90 ms al presionar.
+  - El movimiento explica el oficio: la ruta avanza, las capas se tienden,
+    los planos se dibujan. Solo transform, opacity y clip-path.
+  - Lo que se mueve solo se puede pausar. Con "reducir movimiento" todo queda quieto y visible.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --asphalt: #1d2125;
+  --asphalt-soft: #2a2f35;
+  --asphalt-deep: #111417;
+  --paper: #f3f2ee;
+  --concrete: #e7e5e0;
+  --marking: #f5b400;
+  --gravel: #6a7077;
+  --subbase: #736a5e;
+  --earth: #7b5b3d;
+  --muted: #474d53;
+  --line: rgb(29 33 37 / 0.16);
+
+  --nav: 72px;
+  --padt: 120px;
+  --padb: 72px;
+  --gut: 80px;
+
+  --t-h2: clamp(34px, 2.2vw + 26px, 64px);
+  --t-lead: clamp(18px, 0.4vw + 16.5px, 20px);
+
+  --m-in: 140ms;
+  --m-out: 200ms;
+  --m-press: 90ms;
+  --m-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --m-io: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (max-width: 1023px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --gut: 48px;
+  }
+}
+@media (max-width: 639px) {
+  :root {
+    --nav: 56px;
+    --padt: 96px;
+    --padb: 48px;
+    --gut: 24px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-asphalt: var(--asphalt);
+  --color-paper: var(--paper);
+  --color-concrete: var(--concrete);
+  --color-marking: var(--marking);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-rethink), system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--asphalt);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--asphalt);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--marking);
+  }
+
+  ::selection {
+    background: var(--marking);
+    color: var(--asphalt);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  p,
+  dd {
+    text-wrap: pretty;
+  }
+}
+
+/* =====================================================================
+   Estructura: mismos bordes en toda la página, una sección por pantalla
+   ===================================================================== */
+.wrap {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2 * var(--gut), 1280px);
+  margin-inline: auto;
+}
+main > section {
+  min-height: calc(var(--h, 1) * 100svh);
+  padding-top: var(--padt);
+  padding-bottom: var(--padb);
+}
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px;
+}
+.titulo {
+  font-size: var(--t-h2);
+  line-height: 1.02;
+}
+.bajada {
+  max-width: 34rem;
+  font-size: var(--t-lead);
+  line-height: 1.5;
+  color: var(--muted);
+}
+.sr-only-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--asphalt);
+  color: var(--paper);
+  font-weight: 500;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* =====================================================================
+   Botones y enlaces
+   ===================================================================== */
+.btn {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    transform var(--m-out) var(--m-ease),
+    background-color var(--m-out) var(--m-ease),
+    border-color var(--m-out) var(--m-ease);
+}
+.btn-primary {
+  background: var(--asphalt);
+  color: var(--paper);
+}
+.btn-secondary {
+  border-color: var(--line);
+  color: var(--asphalt);
+}
+.btn svg {
+  transition: transform var(--m-out) var(--m-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    transform: translateY(-1px);
+    transition-duration: var(--m-in);
+  }
+  .btn-primary:hover {
+    background: #3a4047;
+  }
+  .btn-secondary:hover {
+    border-color: var(--asphalt);
+    background: rgb(29 33 37 / 0.05);
+  }
+  .btn:hover svg {
+    transform: translateX(3px);
+  }
+}
+.btn:active {
+  transform: translateY(1px) scale(0.985);
+  transition-duration: var(--m-press);
+}
+
+.link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  padding-block: 4px;
+  transition: background-size var(--m-out) var(--m-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .link-draw:hover {
+    background-size: 100% 1px;
+    transition-duration: var(--m-in);
+  }
+}
+
+/* =====================================================================
+   Barra superior: siempre igual. La línea de pintura marca cuánto se avanzó.
+   ===================================================================== */
+.nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: var(--nav);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.nav > .wrap {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+.scroll-progress {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 3px;
+  width: 100%;
+  background: var(--marking);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-progress {
+    animation: progreso linear both;
+    animation-timeline: scroll(root);
+  }
+}
+@keyframes progreso {
+  to {
+    transform: scaleX(1);
+  }
+}
+.menu-movil {
+  position: fixed;
+  inset: var(--nav) 0 0;
+  overflow-y: auto;
+  padding: 16px var(--gut) 32px;
+  background: var(--paper);
+  animation: entra-abajo 200ms var(--m-ease) both;
+}
+@keyframes entra-abajo {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* =====================================================================
+   Inicio: el titular es la imagen; abajo, la ruta
+   ===================================================================== */
+.hero {
+  display: flex;
+  height: 100svh;
+  min-height: 600px;
+  flex-direction: column;
+  overflow: hidden;
+}
+main > section.hero {
+  --line: rgb(243 242 238 / 0.22);
+  --muted: rgb(243 242 238 / 0.72);
+  position: relative;
+  padding-top: calc(var(--nav) + 48px);
+  padding-bottom: 0;
+  background: var(--asphalt);
+  color: var(--paper);
+}
+.hero-plano {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.hero .bajada {
+  color: var(--paper);
+}
+.hero .btn-primary {
+  background: var(--marking);
+  color: var(--asphalt);
+}
+.hero .btn-secondary {
+  color: var(--paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero .btn-primary:hover {
+    background: #ffc933;
+  }
+  .hero .btn-secondary:hover {
+    border-color: var(--paper);
+    background: rgb(243 242 238 / 0.08);
+  }
+}
+.hero > .wrap {
+  flex: 1;
+}
+.hero-h1 {
+  font-size: min(10.6vw, 21svh, 158px);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+}
+.hero-linea {
+  display: block;
+  overflow: hidden;
+  padding: 0.04em 0 0.1em;
+  margin-bottom: -0.1em;
+}
+.hero-linea > span {
+  display: inline-block;
+  animation: linea-sube 800ms var(--m-ease) both;
+  animation-delay: calc(var(--n, 0) * 90ms + 80ms);
+}
+@keyframes linea-sube {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+/* La palabra que cambia: todas ocupan la misma celda, así la línea no salta */
+.palabra {
+  position: relative;
+  display: inline-grid;
+  overflow: hidden;
+  vertical-align: top;
+}
+.palabra > span {
+  position: relative;
+  grid-area: 1 / 1;
+  justify-self: start;
+  padding-bottom: 0.14em;
+  transform: translateY(125%);
+  transition: transform 620ms var(--m-io);
+}
+.palabra > span[data-estado="activa"] {
+  transform: none;
+}
+.palabra > span[data-estado="salida"] {
+  transform: translateY(-125%);
+}
+/* El subrayado es de cada palabra: se pinta cuando la palabra llega */
+.palabra > span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.02em;
+  height: 0.07em;
+  background: var(--marking);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.palabra > span[data-estado="activa"]::after {
+  transform: none;
+  transition: transform 640ms var(--m-io) 260ms;
+}
+.hero-pie {
+  margin-top: clamp(24px, 5svh, 56px);
+  align-items: start;
+}
+.hero-entra {
+  animation: hero-entra 620ms var(--m-ease) 420ms both;
+}
+@keyframes hero-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.hechos > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.hechos > div:first-child {
+  border-top: 1px solid var(--line);
+}
+.hechos dt {
+  color: var(--muted);
+}
+.hechos dd {
+  font-weight: 500;
+  text-align: right;
+}
+
+/* La ruta: bordes blancos y línea central que avanza */
+.ruta {
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: clamp(72px, 13svh, 128px);
+  margin-top: 24px;
+  overflow: hidden;
+  background-color: var(--asphalt-deep);
+  animation: ruta-tiende 1100ms var(--m-io) both;
+}
+@keyframes ruta-tiende {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.ruta::before {
+  content: "";
+  position: absolute;
+  inset: 12px 0;
+  border-block: 2px solid rgb(243 242 238 / 0.85);
+}
+.ruta-linea {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: calc(100% + 160px);
+  height: 6px;
+  margin-top: -3px;
+  background-image: repeating-linear-gradient(90deg, var(--marking) 0 88px, transparent 88px 160px);
+  animation: ruta-avanza 1.8s linear infinite;
+}
+.ruta[data-pausada="true"] .ruta-linea {
+  animation-play-state: paused;
+}
+@keyframes ruta-avanza {
+  to {
+    transform: translateX(-160px);
+  }
+}
+.ruta-pausa {
+  position: absolute;
+  right: max(var(--gut), calc((100% - 1280px) / 2));
+  top: 50%;
+  z-index: 1;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  margin-top: -16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--asphalt);
+  transition: transform var(--m-out) var(--m-ease);
+}
+.ruta-pausa::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ruta-pausa:hover {
+    transform: scale(1.08);
+  }
+}
+
+/* =====================================================================
+   Servicios: cada fila se llena con el material del trabajo
+   ===================================================================== */
+.servicio {
+  --fill: var(--asphalt);
+  --fg: var(--paper);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: 24px;
+  align-items: center;
+  min-height: clamp(76px, 11svh, 104px);
+  padding: 8px 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  transition: color var(--m-out) var(--m-ease);
+}
+.servicio::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--fill);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 420ms var(--m-io);
+}
+.servicio > * {
+  position: relative;
+}
+.servicio-nombre {
+  grid-column: span 6;
+  font-size: clamp(26px, min(3.7vw, 6svh), 54px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  transition: transform 420ms var(--m-ease);
+}
+.servicio-texto {
+  grid-column: span 5;
+  color: var(--muted);
+  transition: color var(--m-out) var(--m-ease);
+}
+.servicio-flecha {
+  grid-column: span 1;
+  justify-self: end;
+  margin-right: 16px;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity var(--m-out) var(--m-ease),
+    transform 420ms var(--m-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .servicio:hover {
+    color: var(--fg);
+  }
+  .servicio:hover::before {
+    transform: none;
+  }
+  .servicio:hover .servicio-nombre {
+    transform: translateX(16px);
+  }
+  .servicio:hover .servicio-texto {
+    color: var(--fg);
+  }
+  .servicio:hover .servicio-flecha {
+    opacity: 1;
+    transform: none;
+  }
+}
+.servicio:focus-visible {
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+/* =====================================================================
+   El corte del camino: se construye de abajo hacia arriba con el scroll
+   ===================================================================== */
+main > section.camino {
+  height: calc(var(--h, 2) * 100svh);
+  padding: 0;
+  background: var(--asphalt);
+  color: var(--paper);
+}
+.camino-escena {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: 100svh;
+  flex-direction: column;
+  padding-top: calc(var(--nav) + clamp(16px, 5svh, 48px));
+  overflow: hidden;
+}
+.camino-detalle {
+  margin-top: clamp(16px, 3svh, 32px);
+  min-height: 7.5rem;
+}
+.camino-detalle dt {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--marking);
+}
+.camino-detalle dd {
+  margin-top: 4px;
+  color: rgb(243 242 238 / 0.88);
+}
+.detalle-in {
+  animation: entra-detalle 220ms var(--m-ease) both;
+}
+@keyframes entra-detalle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.corte {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: clamp(12px, 3svh, 32px);
+  flex-direction: column;
+  border-top: 1px dashed rgb(243 242 238 / 0.25);
+}
+.corte-pintura {
+  flex: none;
+  height: 10px;
+  background-image: repeating-linear-gradient(90deg, var(--marking) 0 72px, transparent 72px 128px);
+  clip-path: inset(0 calc((1 - var(--l, 1)) * 100%) 0 0);
+}
+.capa {
+  position: relative;
+  display: flex;
+  flex: var(--peso, 1) 1 0;
+  min-height: 0;
+  width: 100%;
+  align-items: center;
+  text-align: left;
+  color: var(--paper);
+  border-top: 1px dashed rgb(243 242 238 / 0.25);
+  isolation: isolate;
+}
+.capa-relleno {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  clip-path: inset(0 calc((1 - var(--l, 1)) * 100%) 0 0);
+}
+.capa-fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  transition: transform var(--m-out) var(--m-ease);
+}
+.capa-nombre {
+  font-size: clamp(24px, 4.4svh, 44px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.capa-material {
+  text-align: right;
+}
+.capa-marca {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: var(--marking);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 260ms var(--m-ease);
+}
+.capa[aria-selected="true"] .capa-marca {
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .capa:hover .capa-fila {
+    transform: translateX(8px);
+  }
+}
+.capa:focus-visible {
+  z-index: 1;
+  outline-color: var(--paper);
+  outline-offset: -4px;
+  box-shadow: none;
+}
+
+/* =====================================================================
+   Obras: la lista conduce, el plano se dibuja
+   ===================================================================== */
+.obra-fila {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: clamp(8px, 1.9svh, 18px) 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.obra-fila::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 6px;
+  background: var(--marking);
+  transform: scaleY(0);
+  transition: transform 260ms var(--m-ease);
+}
+.obra-fila[aria-pressed="true"]::before {
+  transform: none;
+}
+.obra-fila-texto {
+  display: block;
+  transition: transform 260ms var(--m-ease);
+}
+.obra-fila[aria-pressed="true"] .obra-fila-texto {
+  transform: translateX(20px);
+}
+.obra-titulo {
+  display: block;
+  font-size: clamp(22px, 1.5vw + 10px, 32px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.obra-texto {
+  display: block;
+  color: var(--muted);
+}
+.plano {
+  position: relative;
+  overflow: hidden;
+  background: var(--asphalt);
+  border-radius: 4px;
+}
+.plano svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.dibuja {
+  stroke-dasharray: 1;
+  animation: dibuja 900ms var(--m-io) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+@keyframes dibuja {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.barre {
+  animation: barre 900ms var(--m-io) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+@keyframes barre {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.aparece {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: aparece 380ms var(--m-ease) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+@keyframes aparece {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* =====================================================================
+   Cómo trabajamos: tres promesas como una sola frase grande
+   ===================================================================== */
+main > section.nosotros {
+  display: flex;
+  background: var(--marking);
+  color: var(--asphalt);
+}
+.nosotros > .wrap {
+  display: flex;
+  flex-direction: column;
+}
+.nosotros-textos {
+  margin-top: auto;
+  padding-top: 40px;
+}
+.promesas {
+  margin-top: clamp(24px, 4svh, 48px);
+  font-size: min(7.4vw, 15svh, 112px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.promesas span {
+  display: block;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .promesas span {
+      animation: enciende linear both;
+      animation-timeline: view();
+      animation-range: entry 35% cover 42%;
+    }
+  }
+}
+@keyframes enciende {
+  from {
+    opacity: 0.22;
+  }
+}
+
+/* =====================================================================
+   Formulario: la línea se pinta al entrar en el campo
+   ===================================================================== */
+.campo {
+  position: relative;
+  display: block;
+}
+.campo > span:first-child {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.campo input,
+.campo select,
+.campo textarea {
+  display: block;
+  width: 100%;
+  min-height: clamp(48px, 7svh, 64px);
+  padding: 8px 0;
+  border-bottom: 1px solid rgb(29 33 37 / 0.4);
+  border-radius: 0;
+  background: transparent;
+  font-size: 20px;
+  color: var(--asphalt);
+  outline: none;
+  box-shadow: none;
+  resize: vertical;
+}
+.campo select {
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='M2 5l5 5 5-5' fill='none' stroke='%231d2125' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+}
+.campo textarea::placeholder {
+  color: var(--muted);
+}
+.campo-linea {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--marking);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms var(--m-ease);
+}
+.campo:focus-within .campo-linea {
+  transform: none;
+}
+
+main > section.contacto {
+  display: flex;
+}
+.contacto-izq {
+  display: flex;
+  flex-direction: column;
+}
+.contacto-datos {
+  margin-top: auto;
+  padding-block: 32px 8px;
+  font-size: min(4.6vw, 9svh, 72px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+.contacto-datos span {
+  display: block;
+}
+
+/* =====================================================================
+   Cierre
+   ===================================================================== */
+.closing {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--padt) 0 var(--padb);
+  overflow: hidden;
+  background: var(--asphalt-deep);
+  color: var(--paper);
+}
+.marca-gigante {
+  display: block;
+  font-size: min(31.4vw, 472px);
+  font-weight: 500;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  color: var(--marking);
+  white-space: nowrap;
+}
+
+/* =====================================================================
+   Tablet y teléfono
+   ===================================================================== */
+@media (min-width: 1024px) {
+  /* El mensaje crece para que el botón cierre a la altura del texto grande */
+  .contacto > .wrap > div:last-child,
+  .contacto-form {
+    height: 100%;
+  }
+  .contacto-form {
+    grid-template-rows: auto auto 1fr auto;
+  }
+  .campo-crece {
+    display: flex;
+    flex-direction: column;
+  }
+  .campo-crece textarea {
+    flex: 1;
+    resize: none;
+  }
+}
+@media (max-width: 1023px) {
+  .hero-pie > * {
+    grid-column: 1 / -1 !important;
+  }
+  .obra-fila {
+    padding-block: 12px;
+  }
+  .obra-texto {
+    display: none;
+  }
+  .contacto-datos {
+    display: none;
+  }
+}
+@media (max-width: 639px) {
+  .grilla {
+    gap: 12px;
+  }
+  .nav-pedir {
+    display: none;
+  }
+  .obra-fila {
+    padding-block: 8px;
+  }
+  .obra-fila::before {
+    top: 10px;
+    bottom: 10px;
+  }
+  .plano-caja {
+    height: 22svh;
+  }
+  .campo textarea {
+    height: 88px;
+  }
+  .contacto-form {
+    gap: 16px;
+  }
+  .hero-h1 {
+    font-size: 11.2vw;
+  }
+  .hechos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+  }
+  .hechos > div {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .hechos > div:nth-child(2) {
+    border-top: 1px solid var(--line);
+  }
+  .hechos dd {
+    text-align: left;
+  }
+  .servicio {
+    display: block;
+    min-height: 0;
+    padding: 7px 0;
+  }
+  .servicio-nombre {
+    display: block;
+    font-size: 24px;
+  }
+  .servicio-texto {
+    display: block;
+    margin-top: 2px;
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  .servicio-flecha {
+    display: none;
+  }
+  .capa-material {
+    display: none;
+  }
+  .camino-detalle {
+    min-height: 13.5rem;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .promesas {
+    font-size: 13.4vw;
+  }
+}
+
+/* =====================================================================
+   Reducir movimiento: nada se mueve solo y nada queda oculto
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0ms !important;
+  }
+  .scroll-progress,
+  .ruta-pausa {
+    display: none;
+  }
+  main > section.camino {
+    height: auto;
+    min-height: 100svh;
+  }
+  .camino-escena {
+    position: relative;
+    min-height: 100svh;
+  }
 }
